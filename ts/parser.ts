@@ -1,4 +1,4 @@
-namespace casts {
+namespace parser_ts {
 
 export let termDic : { [id : number] : Term } = {};
 
@@ -552,26 +552,11 @@ export abstract class Term {
                 assert(app.args.length == 1);
                 return Math.sqrt(app.args[0].calc());
             }
-            else if(app.entity != undefined){
-                return app.entity.getNumber();
-            }
             else{
                 throw new MyError("unimplemented");
             }
         }
         throw new MyError("unimplemented");
-    }
-
-    getEntity() : Entity {
-        if(this instanceof RefVar){
-            if(this.refVar != undefined){
-                return this.refVar.getEntity();
-            }                 
-        }
-        else if(this instanceof App && this.entity != undefined){
-            return this.entity;
-        }
-        throw new MyError();
     }
 
     copyValue(cns : ConstNum){
@@ -590,11 +575,6 @@ export abstract class Term {
 
             msg(`${nest}${this.id}:${this.str()}`);
         }
-    }
-
-    renderTex(div : HTMLDivElement){
-        const tex = this.tex();
-        renderKatexSub(div, tex);    
     }
 }
 
@@ -659,7 +639,6 @@ export class Variable {
     name : string;
     expr : Term;
     depVars : Variable[];
-    entity : Entity | undefined;
 
     constructor(name : string, expr : Term){
         variables.push(this);
@@ -675,27 +654,8 @@ export class Variable {
         }
     }
 
-    getEntity() : Entity {
-        if(this.entity != undefined){
-            return this.entity;
-        }
-        else if(this.expr instanceof App && this.expr.entity != undefined){
-            return this.expr.entity;
-        }
-        else{
-            throw new MyError();
-        }
-    }
-
     rename(new_name : string){
         this.name = new_name;
-        const shape = this.getEntity();
-        if(shape instanceof ShapeM){
-            shape.name = new_name;
-            if(shape.divCaption != null){
-                shape.divCaption.textContent = new_name;
-            }
-        }
     }
 }
 
@@ -817,7 +777,6 @@ export class Str extends Term{
 export class App extends Term{
     fnc : Term;
     args: Term[];
-    entity : Entity | undefined;
     remParentheses : boolean = false;
 
     static startEnd : { [start : string] : string } = {
@@ -1570,6 +1529,14 @@ export function allTerms(trm : Term) : Term[] {
     getAllTerms(trm, terms);
 
     return terms;
+}
+
+export function bodyOnLoad(){
+    const texts = ($("sample") as HTMLTextAreaElement).value.replace("\r\n", "\n").split("\n").map(x => x.trim()).filter(x => x != "");
+    for(const text of texts){
+        msg(text);
+        parseMath(text);
+    }
 }
 
 }

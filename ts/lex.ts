@@ -1,4 +1,4 @@
-namespace casts {
+namespace parser_ts {
 
 export enum TokenType{
     unknown,
