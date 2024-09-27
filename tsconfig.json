@@ -54,8 +54,8 @@
     // "emitDeclarationOnly": true,                      /* Only output d.ts files and not JavaScript files. */
     // "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */
     "inlineSourceMap": true,                             /* Include sourcemap files inside the emitted JavaScript. */
-    "outFile": "./public/lib/parser/js/parser.js",       /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
-    "outDir": "./public/lib/parser/js",                  /* Specify an output folder for all emitted files. */
+    "outFile": "./public/lib/parser/parser.js",       /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
+    "outDir": "./public/lib/parser",                  /* Specify an output folder for all emitted files. */
     // "removeComments": true,                           /* Disable emitting comments. */
     // "noEmit": true,                                   /* Disable emitting files from a compilation. */
     // "importHelpers": true,                            /* Allow importing helper functions from tslib once per project, instead of including them per-file. */
