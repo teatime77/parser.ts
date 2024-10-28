@@ -1,4 +1,8 @@
 .vscode/settings.json
+install.bat
+
+ts/@types
+
 public/lib/parser/parser.d.ts
 public/lib/parser/parser.js
-install.bat
+public/lib/i18n
