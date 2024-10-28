@@ -21,6 +21,12 @@ export class MyError extends Error {
     }
 }
 
+export class SyntaxError extends MyError{
+    constructor(text : string = ""){
+        super(text);
+    }
+}
+
 export function assert(b : boolean, msg : string = ""){
     if(!b){
         throw new MyError(msg);

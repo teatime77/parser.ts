@@ -565,7 +565,7 @@ export function allTexNodes(node : TexNode) : TexNode[] {
     return terms;
 }
 
-export function *showFlow(speech : AbstractSpeech, root : App, div : HTMLDivElement){
+export function makeNodeTextByApp(root : App) : [TexNode, string]{
     root.setParent(null);
     root.setTabIdx();
 
@@ -574,6 +574,12 @@ export function *showFlow(speech : AbstractSpeech, root : App, div : HTMLDivElem
     node.makeSpeech(phrases);
 
     const text = makeTextFromPhrases(phrases);
+
+    return [node, text];
+}
+
+export function *showFlow(speech : AbstractSpeech, root : App, div : HTMLDivElement){
+    const [node, text] = makeNodeTextByApp(root);
 
     speech.speak(text);
 

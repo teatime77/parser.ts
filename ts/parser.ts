@@ -41,7 +41,7 @@ export function parseMath(text: string) : Term {
     const parser = new Parser(text);
     const trm = parser.RootExpression();
     if(parser.token.typeTkn != TokenType.eot){
-        throw new MyError();
+        throw new SyntaxError();
     }
 
     trm.setParent(null);
@@ -334,21 +334,6 @@ export abstract class Term {
         }
 
         target.parent = app;
-    }
-
-    index() : number {
-        if(this.parent != null){
-            if(this.parent.fnc == this){
-                return -1;
-            }
-            const idx = this.parent!.args.indexOf(this);
-            assert(idx != -1, "index 1");
-            return idx;
-        }
-        else{
-
-            throw new MyError("index 2");
-        }
     }
 
     remArg() {
@@ -1133,7 +1118,7 @@ export class Parser {
     nextToken(text : string){
         if(this.token.text != text){
             this.showError(text);
-            throw new MyError();
+            throw new SyntaxError();
         }
 
         this.next();
@@ -1201,7 +1186,7 @@ export class Parser {
         else if(this.token.typeTkn == TokenType.Number){
             let n = parseFloat(this.token.text);
             if(isNaN(n)){
-                throw new MyError();
+                throw new SyntaxError();
             }
 
             trm = new ConstNum(n);
@@ -1231,7 +1216,7 @@ export class Parser {
             trm = this.RelationalExpression();
 
             if(this.current() != ')'){
-                throw new MyError();
+                throw new SyntaxError();
             }
             this.next();
 
@@ -1246,7 +1231,7 @@ export class Parser {
             return trm;
         }
         else{
-            throw new MyError();
+            throw new SyntaxError();
         }
 
         return trm;
