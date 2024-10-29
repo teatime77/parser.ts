@@ -2,6 +2,10 @@ namespace parser_ts {
 //
 type AbstractSpeech = i18n_ts.AbstractSpeech;
 
+export interface Highlightable {
+    highlight(highlighted : boolean) : void;
+}
+
 function symbol2words(symbol: string) : string {
     const tbl: { [symbol: string]: string } = {
         "sin" : "sine",
@@ -150,7 +154,7 @@ abstract class TexNode {
         return "";
     }
 
-    *genTex(speech : AbstractSpeech | null) : IterableIterator<string> {
+    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
         yield "";
     }
 
@@ -196,11 +200,11 @@ class TexSeq extends TexBlock {
         super(nodes);
     }
 
-    *genTex(speech : AbstractSpeech | null) : IterableIterator<string> {
+    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
         const arg_strs = this.nodes.map(x => x.initString());
 
         for(let [idx, node] of this.nodes.entries()){
-            for(const s of node.genTex(speech)){
+            for(const s of node.genTex(speech, highlightables)){
                 arg_strs[idx] = s;
 
                 yield `${arg_strs.join(" ")}`;
@@ -239,7 +243,7 @@ abstract class TexLeaf extends TexNode {
         }
     }
 
-    *genTex(speech : AbstractSpeech | null) : IterableIterator<string> {
+    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
         const tex_text = this.texText()
 
         if(speech != null && this.phrase != undefined){
@@ -291,6 +295,26 @@ class TexRef extends TexLeaf {
             return this.ref.name;
         }
     }
+
+    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
+        if(highlightables != undefined){
+
+            const highlightable = highlightables.get(this.ref.name);
+            if(highlightable != undefined){
+                highlightable.highlight(true);
+            }
+        }
+
+        const tex_text = this.texText()
+
+        if(speech != null && this.phrase != undefined){
+            while(speech.speaking && speech.prevCharIndex < this.phrase.start){
+                yield tex_text;
+            }
+        }
+
+        yield tex_text;
+    }
 }
 
 class TexStr extends TexLeaf {
@@ -337,7 +361,7 @@ class TexSpeech extends TexStr {
         super(text);
     }
 
-    *genTex(speech : AbstractSpeech | null) : IterableIterator<string> {
+    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
         yield "";
     }
 }
@@ -565,7 +589,7 @@ export function allTexNodes(node : TexNode) : TexNode[] {
     return terms;
 }
 
-export function makeNodeTextByApp(root : App) : [TexNode, string]{
+export function makeNodeTextByApp(root : Term) : [TexNode, string]{
     root.setParent(null);
     root.setTabIdx();
 
@@ -578,12 +602,14 @@ export function makeNodeTextByApp(root : App) : [TexNode, string]{
     return [node, text];
 }
 
-export function *showFlow(speech : AbstractSpeech, root : App, div : HTMLDivElement){
+export function *showFlow(speech : AbstractSpeech, root : Term, div : HTMLDivElement, highlightables? : Map<string, Highlightable>){
+    div.innerHTML = "";
+
     const [node, text] = makeNodeTextByApp(root);
 
     speech.speak(text);
 
-    for(const s of node.genTex(speech)){
+    for(const s of node.genTex(speech, highlightables)){
         renderKatexSub(div, s);
         yield;
     }
