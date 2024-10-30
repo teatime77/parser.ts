@@ -476,8 +476,16 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
                 default:
                     const nodes : TexNode[] = [];
                     for(const [i, arg] of app.args.entries()){
-                        if(i != 0 && 0 <= arg.value.fval()){
-                            nodes.push(new TexStr("+"));
+                        if(i != 0){
+                            const coefficient = arg.value.fval();
+                            if(0 <= coefficient){
+
+                                nodes.push(new TexStr("+"));
+                            }
+                            else if(coefficient == -1){
+
+                                nodes.push(new TexStr("-"));
+                            }
                         }
             
                         nodes.push(makeFlow(arg));
