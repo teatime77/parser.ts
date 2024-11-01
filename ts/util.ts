@@ -17,7 +17,7 @@ export function $(id : string) : HTMLElement {
 
 export class MyError extends Error {
     constructor(text : string = ""){
-        super();
+        super(text);
     }
 }
 
