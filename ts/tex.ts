@@ -97,7 +97,7 @@ function pronunciationF(tex_node : TexNode, word : string) : Phrase | undefined 
 
     if(! oprs.has(word)){
         oprs.add(word);
-        msg(`operators : ${word}`);
+        msg(`operators : [${word}]`);
     }
 
     return undefined;
@@ -116,7 +116,7 @@ export class Phrase {
         for(const word of words){
             if(! oprs.has(word)){
                 oprs.add(word);
-                msg(`word : ${word}`);
+                // msg(`word : ${word}`);
             }        
         }
     }
@@ -327,7 +327,7 @@ class TexStr extends TexLeaf {
 
     speechText() : string {
         if(this.str == "\\lim_{"){
-            msg("");
+            msg("speech-Text:lim");
         }
         const list = [
             "{", "}", "(", ")", "}{", "}^{", "\\frac{"
