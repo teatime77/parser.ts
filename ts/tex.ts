@@ -610,20 +610,20 @@ export function makeNodeTextByApp(root : Term) : [TexNode, string]{
     return [node, text];
 }
 
-export function *showFlow(speech : AbstractSpeech, root : Term, div : HTMLDivElement, highlightables? : Map<string, Highlightable>){
+export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLDivElement, highlightables? : Map<string, Highlightable>){
     div.innerHTML = "";
 
     const [node, text] = makeNodeTextByApp(root);
 
-    speech.speak(text);
+    await speech.speak(text);
 
     for(const s of node.genTex(speech, highlightables)){
         renderKatexSub(div, s);
-        yield;
+        await sleep(10);
     }
 
     while(speech != null && speech.speaking){
-        yield;
+        await sleep(10);
     }
 }
 
