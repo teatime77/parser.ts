@@ -190,6 +190,10 @@ export class Rational{
     sign() : number {
         return Math.sign(this.fval());
     }
+
+    changeSign(){
+        this.numerator *= -1;
+    }
 }
 
 export abstract class Term {
@@ -248,6 +252,10 @@ export abstract class Term {
         dst.colorName  = this.colorName;
     }
 
+
+    changeSign(){
+        this.value.changeSign();
+    }
 
     /**
      * 
@@ -337,10 +345,17 @@ export abstract class Term {
     }
 
     remArg() {
-        assert(this.parent != null, "rem arg 1");
-        const idx = this.parent!.args.indexOf(this);
+        if(this.parent == null){
+            throw new MyError();
+        }
+
+        const idx = this.parent.args.indexOf(this);
         assert(idx != -1, "rem arg 2");
-        this.parent!.args.splice(idx, 1);
+        this.parent.args.splice(idx, 1);
+
+        if(this.parent.args.length == 1){
+            this.parent.oneArg();
+        }
     }
 
     putValue(text : string, in_tex : boolean) : string {
@@ -561,6 +576,23 @@ export abstract class Term {
             msg(`${nest}${this.id}:${this.str()}`);
         }
     }
+
+    getAllTerms(terms : Term[]){
+        terms.push(this);
+        if(this instanceof App){
+            this.fnc.getAllTerms(terms);
+            this.args.forEach(x => x.getAllTerms(terms));
+        }
+    }
+
+    includesTerm(term : Term) : boolean {
+        if(this instanceof App){
+            return this.allTerms().includes(term);
+        }
+        else{
+            return this == term;
+        }
+    }
 }
 
 export class Path extends Term {
@@ -681,12 +713,16 @@ export class RefVar extends Term{
     }
 
     tex2() : string {
-        return texName(this.name);
+        return `\\htmlId{refvar-${this.id}}{${texName(this.name)}}`;
     }
 }
 
 
 export class ConstNum extends Term{
+    static zero() : ConstNum {
+        return new ConstNum(0);
+    }
+
     constructor(numerator : number, denominator : number = 1){
         super();
         this.value = new Rational(numerator, denominator);
@@ -1078,6 +1114,34 @@ export class App extends Term{
             const trm = args_cp.pop()!;
             this.insArg(trm, idx);
         }
+    }
+
+    /**
+     * 
+     * @description 引数が1個だけの加算や乗算を、唯一の引数で置き換える。
+     */
+    oneArg() {
+        assert(this.args.length == 1, "one arg");
+
+        // 唯一の引数
+        const arg1 = this.args[0];
+
+        // 加算や乗算を唯一の引数で置き換える。
+        this.replaceTerm(arg1);
+
+        // 唯一の引数の係数に、加算や乗算の係数をかける。
+        arg1.value.setmul(this.value);
+    }
+
+    allTerms() : Term[] {
+        const terms : Term[] = [];
+        this.getAllTerms(terms);
+
+        return terms;
+    }
+
+    findTermById(id : number) : Term | undefined {
+        return this.allTerms().find(x => x.id == id);
     }
 }
 
