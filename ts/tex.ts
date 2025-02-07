@@ -154,7 +154,7 @@ abstract class TexNode {
         return "";
     }
 
-    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
+    async *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : AsyncGenerator<string, void, unknown> {
         yield "";
     }
 
@@ -200,11 +200,11 @@ class TexSeq extends TexBlock {
         super(nodes);
     }
 
-    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
+    async *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : AsyncGenerator<string, void, unknown> {
         const arg_strs = this.nodes.map(x => x.initString());
 
         for(let [idx, node] of this.nodes.entries()){
-            for(const s of node.genTex(speech, highlightables)){
+            for await(const s of node.genTex(speech, highlightables)){
                 arg_strs[idx] = s;
 
                 yield `${arg_strs.join(" ")}`;
@@ -243,11 +243,13 @@ abstract class TexLeaf extends TexNode {
         }
     }
 
-    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
+    async *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : AsyncGenerator<string, void, unknown> {
         const tex_text = this.texText()
 
         if(speech != null && this.phrase != undefined){
             while(speech.speaking && speech.prevCharIndex < this.phrase.start){
+                msg(`await tex-leaf.gen-tex: prev-Char-Index:${speech.prevCharIndex} phrase-start:${this.phrase.start}`)
+                await sleep(100);
                 yield tex_text;
             }
         }
@@ -296,7 +298,7 @@ class TexRef extends TexLeaf {
         }
     }
 
-    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
+    async *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : AsyncGenerator<string, void, unknown> {
         if(highlightables != undefined){
 
             const highlightable = highlightables.get(this.ref.name);
@@ -309,6 +311,8 @@ class TexRef extends TexLeaf {
 
         if(speech != null && this.phrase != undefined){
             while(speech.speaking && speech.prevCharIndex < this.phrase.start){
+                msg(`await tex-ref.gen-tex: prev-Char-Index:${speech.prevCharIndex} phrase-start:${this.phrase.start}`)
+                await sleep(100);
                 yield tex_text;
             }
         }
@@ -361,7 +365,7 @@ class TexSpeech extends TexStr {
         super(text);
     }
 
-    *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : IterableIterator<string> {
+    async *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : AsyncGenerator<string, void, unknown> {
         yield "";
     }
 }
@@ -617,9 +621,15 @@ export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLD
 
     await speech.speak(text);
 
-    for(const s of node.genTex(speech, highlightables)){
-        renderKatexSub(div, s);
-        await sleep(10);
+    let prev_s = "";
+    for await(const s of node.genTex(speech, highlightables)){
+        if(prev_s != s){
+            prev_s = s;
+
+            msg(`show flow:${s}`);
+            renderKatexSub(div, s);
+            await sleep(10);
+        }
     }
 
     while(speech != null && speech.speaking){
