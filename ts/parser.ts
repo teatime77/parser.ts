@@ -159,6 +159,15 @@ export class Rational{
         }
     }
 
+    addRational(r : Rational){
+        const old_fval = this.fval();
+
+        this.numerator = this.numerator * r.denominator + r.numerator * this.denominator;
+        this.denominator *= r.denominator;
+
+        assert(Math.abs(old_fval + r.fval() - this.fval()) < 0.00000001);
+    }
+
     setmul(... rs : Rational[]){
         this.numerator   *= rs.reduce((acc, cur) => acc * cur.numerator,   1);
         this.denominator *= rs.reduce((acc, cur) => acc * cur.denominator, 1);
@@ -376,7 +385,8 @@ export abstract class Term {
             }
             else if(this.value.denominator == 1){
 
-                val = `${this.value.numerator} * ${text}`
+                const opr = (in_tex ? "\\cdot" : "*");
+                val = `${this.value.numerator} ${opr} ${text}`
             }
             else{
                 throw new MyError();
