@@ -300,8 +300,7 @@ export abstract class Term {
         }
         else{
 
-            idx = this.parent.args.indexOf(this);
-            assert(idx != -1);
+            idx = this.argIdx();
         }
 
         path.indexes.unshift(idx);
@@ -317,6 +316,16 @@ export abstract class Term {
         }
 
         return this.parent!.getRoot();
+    }
+
+    getRootEqSideIdx() : number {
+        for(let term : Term = this; term.parent != null; term = term.parent){
+            if(term.parent.isRootEq()){
+                return term.argIdx();
+            }
+        }
+
+        throw new MyError();
     }
 
     setParent(parent : App | null){
@@ -353,13 +362,23 @@ export abstract class Term {
         target.parent = app;
     }
 
-    remArg() {
+    argIdx() : number {
         if(this.parent == null){
             throw new MyError();
         }
 
         const idx = this.parent.args.indexOf(this);
-        assert(idx != -1, "rem arg 2");
+        assert(idx != -1, "arg idx");
+
+        return idx;
+    }
+
+    remArg() {
+        if(this.parent == null){
+            throw new MyError();
+        }
+
+        const idx = this.argIdx();
         this.parent.args.splice(idx, 1);
 
         if(this.parent.args.length == 1){
@@ -394,8 +413,7 @@ export abstract class Term {
         }
 
         if(this.parent != null && this != this.parent.fnc && this.parent.isAdd()){
-            const idx = this.parent.args.indexOf(this);
-            assert(idx != -1, "tex");
+            const idx = this.argIdx();
 
             if(idx != 0){
 
@@ -485,6 +503,10 @@ export abstract class Term {
 
     isEq() : boolean {
         return this instanceof App && (this.fncName == "==" || this.fncName == "=");
+    }
+
+    isRootEq() : boolean {
+        return this.isEq() && this.parent == null;
     }
 
     isList() : boolean {
