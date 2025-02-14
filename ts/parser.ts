@@ -354,7 +354,7 @@ export abstract class Term {
         this.parent.args.splice(idx, 1);
 
         if(this.parent.args.length == 1){
-            this.parent.oneArg();
+            // this.parent.oneArg();
         }
     }
 
@@ -372,7 +372,6 @@ export abstract class Term {
                 val = text;
             }
             else if(this.value.fval() == -1){
-                // val = "-" + tex2;
                 val = `- ${text}`;
             }
             else if(this.value.denominator == 1){
@@ -442,7 +441,11 @@ export abstract class Term {
             }
         }
 
-        const text = this.tex2();
+        let text = this.tex2();
+        if(this instanceof RefVar || this instanceof App){
+            text = `\\htmlId{tex-term-${this.id}}{${text}}`;
+        }
+
         if(this.colored()){
 
             return `{\\color{${this.colorName}} ${this.putValue(text, true)}}`;
@@ -713,7 +716,7 @@ export class RefVar extends Term{
     }
 
     tex2() : string {
-        return `\\htmlId{refvar-${this.id}}{${texName(this.name)}}`;
+        return texName(this.name);
     }
 }
 
