@@ -470,19 +470,22 @@ export abstract class Term {
         }
 
         let text = this.tex2();
-        if(this instanceof RefVar || this instanceof App){
-            text = `\\htmlId{tex-term-${this.id}}{${text}}`;
-        }
 
         if(this.colored()){
 
-            return `{\\color{${this.colorName}} ${this.putValue(text, true)}}`;
-            return this.htmldata(this.putValue(text, true));
+            text = `{\\color{${this.colorName}} ${this.putValue(text, true)}}`;
+            // return this.htmldata(this.putValue(text, true));
         }
         else{
 
-            return this.putValue(text, true);
+            text = this.putValue(text, true);
         }
+
+        if(this instanceof ConstNum || this instanceof RefVar || this instanceof App){
+            text = `\\htmlId{tex-term-${this.id}}{${text}}`;
+        }
+
+        return text;
     }
 
     isApp(fnc_name : string) : boolean {
@@ -560,6 +563,17 @@ export abstract class Term {
     isLim() : boolean {
         return this instanceof App && this.fncName == "lim";
     }
+
+    dividend() : Term {
+        assert(this.isDiv());
+        return (this as any as App).args[0];
+    }
+
+    divisor() : Term {
+        assert(this.isDiv());
+        return (this as any as App).args[1];
+    }
+
 
     depend(dvar : RefVar) : boolean {
         return allTerms(this).some(x => dvar.eq(x));
