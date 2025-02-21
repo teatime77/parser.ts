@@ -191,6 +191,17 @@ export class Rational{
         this.denominator = Math.abs(this.denominator);
     }
 
+    isInt() : boolean {
+        return this.denominator == 1;
+    }
+
+    isDivisor(r : Rational) : boolean {
+        const numerator   = r.numerator * this.denominator;
+        const denominator = r.denominator * this.numerator;
+
+        return numerator % denominator == 0;
+    }
+
     int() : number {
         assert(this.denominator == 1);
         return this.numerator;
@@ -546,6 +557,10 @@ export abstract class Term {
 
     isOne() : boolean {
         return this.isValue(1);
+    }
+
+    isInt() : boolean {
+        return this instanceof ConstNum && this.value.isInt();
     }
 
     isE() : boolean {
@@ -1427,6 +1442,21 @@ export class Parser {
                     trm1 = app;
                     break;
                 }
+            }
+        }
+
+        if(trm1 instanceof App && trm1.args[0] instanceof ConstNum){
+            if(trm1.args.length == 2){
+
+                const [num, trm2] = trm1.args;
+                trm2.value.setmul(num.value);
+                return trm2;
+            }
+            else{
+                const num = trm1.args[0];
+                trm1.value.setmul(num.value);
+                num.remArg();
+                return trm1;
             }
         }
     
