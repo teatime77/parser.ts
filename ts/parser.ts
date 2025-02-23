@@ -229,9 +229,11 @@ export abstract class Term {
 
     canceled : boolean = false;
     colorName  : string | undefined;
+    hash : bigint = 0n;
 
     constructor(){
         this.id = termId++;
+        this.value.parent = this;
     }
 
     abstract tex2() : string;
@@ -268,6 +270,8 @@ export abstract class Term {
 
     copy(dst : Term){
         dst.value  = this.value.clone();
+        dst.value.parent = dst;
+
         dst.canceled = this.canceled;
         dst.colorName  = this.colorName;
     }
@@ -339,6 +343,16 @@ export abstract class Term {
         throw new MyError();
     }
 
+    getEqSide() : Term | null {
+        for(let term : Term = this; term.parent != null; term = term.parent!){
+            if(term.parent.isRootEq()){
+                return term;
+            }
+        }
+
+        return null;
+    }
+
     setParent(parent : App | null){
         this.parent = parent;
         this.value.parent = this;
@@ -351,6 +365,10 @@ export abstract class Term {
     verifyParent(parent : App | null){
         assert(this.parent == parent);
         assert(this.value.parent == this)
+    }
+
+    verifyParent2(){
+        this.verifyParent(this.parent);
     }
 
     setStrVal(){
