@@ -429,12 +429,24 @@ export abstract class Term {
                 val = text;
             }
             else if(this.value.fval() == -1){
-                val = `- ${text}`;
+                if(this.isAdd()){
+
+                    val = `- (${text})`;
+                }
+                else{
+
+                    val = `- ${text}`;
+                }
             }
             else if(this.value.denominator == 1){
 
                 const opr = (in_tex ? "\\cdot" : "*");
-                val = `${this.value.numerator} ${opr} ${text}`
+                if(this.isAdd()){
+                    val = `${this.value.numerator} ${opr} (${text})`
+                }
+                else{
+                    val = `${this.value.numerator} ${opr} ${text}`
+                }
             }
             else{
                 throw new MyError();
