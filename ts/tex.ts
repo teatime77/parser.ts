@@ -136,6 +136,7 @@ export function makeTextFromPhrases(phrases : Phrase[]) : string {
         }
         phrase.end = text.length;
     }
+    // msg(`phrases [${text}]`)
 
     return text;
 }
@@ -397,6 +398,24 @@ function join(trms:Term[], delimiter : string) : TexNode {
     }
 }
 
+function prependValue(trm : Term, node : TexNode) : TexNode {
+    const fval = trm.value.fval();
+    if(fval == -1){            
+        node = seq("-", node);
+    }
+    else if(fval !=  1){
+        assert(trm.value.denominator == 1);
+        node = seq(trm.value.numerator.toFixed(), node);
+    }
+
+    if(trm instanceof App){
+        node.termTex = trm;
+    }
+
+    return node;
+
+}
+
 export function makeFlow(trm : TexNode | Term | string) : TexNode {
     if(trm instanceof TexNode){
         return trm;
@@ -406,7 +425,8 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
     }
     else if(trm instanceof RefVar){
         const ref = trm;
-        return new TexRef(ref);
+        const node = new TexRef(ref)
+        return prependValue(ref, node);
     }
     else if(trm instanceof ConstNum){
         const num = trm;
@@ -566,17 +586,7 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
             }
         }
 
-        const fval = app.value.fval();
-        if(fval == -1){            
-            node = seq("-", node);
-        }
-        else if(fval !=  1){
-            assert(app.value.denominator == 1);
-            node = seq(app.value.numerator.toFixed(), node);
-        }
-
-        node.termTex = app;
-        return node;
+        return prependValue(app, node);
     }
     else{
 
