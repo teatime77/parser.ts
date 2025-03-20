@@ -642,9 +642,7 @@ export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLD
         }
     }
 
-    while(speech != null && speech.speaking){
-        await sleep(10);
-    }
+    await speech.waitEnd();
 }
 
 }
