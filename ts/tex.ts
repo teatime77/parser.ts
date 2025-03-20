@@ -636,7 +636,7 @@ export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLD
         if(prev_s != s){
             prev_s = s;
 
-            msg(`show flow:${s}`);
+            // msg(`show flow:${s}`);
             renderKatexSub(div, s);
             await sleep(10);
         }

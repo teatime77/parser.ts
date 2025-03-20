@@ -2,6 +2,7 @@ var katex : any;
 
 namespace parser_ts {
 //
+export const sleep = i18n_ts.sleep;
 const $dic = new Map<string, HTMLElement>();
 
 
@@ -60,14 +61,6 @@ export function renderKatexSub(ele: HTMLElement, tex_text: string){
         strict : false, // "ignore", // false, // handler,
         // newLineInDisplayMode : "ignore",
         macros : getUserMacros()
-    });
-}
-
-export async function sleep(milliseconds : number) : Promise<void> {
-    return new Promise((resolve) => {
-        setTimeout(()=>{
-            resolve();
-        }, milliseconds);
     });
 }
 
