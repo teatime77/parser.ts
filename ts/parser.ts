@@ -23,6 +23,14 @@ export function isSystemName(name : string) : boolean {
     return isShapeName(name) || names.includes(name);
 }
 
+export function isRelationToken(text : string){
+    return [ "==", "=", "!=", "<", ">", "<=", ">=", "in", "notin", "subset" ].includes(text);
+}
+
+function isArithmeticToken(text : string){
+    return ["cup", "cap"].includes(text);
+}
+
 export function getVariable(name : string) : Variable {
     const va = variables.find(x => x.name == name)!;
     assert(va != undefined);
@@ -38,6 +46,7 @@ export function actionRef(name : string) : RefVar {
 }
 
 export function parseMath(text: string) : Term {
+    // msg(`parse-Math:[${text}]`);
     const parser = new Parser(text);
     const trm = parser.RootExpression();
     if(parser.token.typeTkn != TokenType.eot){
@@ -85,19 +94,26 @@ export function texName(text : string){
     switch(text){
     case "=="     : return "=";
     case "!="     : return "\\ne";
-    case "<"      : return "\\gt";
-    case ">"      : return "\\lt";
-    case "<="     : return "\\ge";
-    case ">="     : return "\\le";
+    case "<"      : return "\\lt";
+    case ">"      : return "\\gt";
+    case "<="     : return "\\le";
+    case ">="     : return "\\ge";
     case "*"      : return "\\cdot";
     case "=>"     : return "\\implies";
     case "&&"     : return "\\land";
+    case "||"     : return "\\lor";
     case "hbar"   : return "\\hbar";
     case "nabla"  : return "\\nabla";
     case "nabla2" : return "\\nabla^2";
-    case "sin"  :
-    case "cos"  :
+    case "subset" : return "\\subseteq";
+    case "infty"  : return "\\infty";
+    case "cup":
+    case "cap":
+    case "sin":
+    case "cos":
+    case "tan":
     case "in"   :
+    case "notin":
         return `\\${text}`;
     }
 
@@ -221,8 +237,7 @@ export abstract class Term {
     id : number;
     tabIdx : number = 0;
     parent : App | null = null;
-    strval : string = "";
-    partialTex : string | undefined;
+    cloneFrom : Term | undefined;
 
     // 係数
     value : Rational = new Rational(1);
@@ -260,15 +275,12 @@ export abstract class Term {
         return this.str() == trm.str();
     }
 
-    eq2(trm : Term) : boolean {
-        return this.strval == trm.strval;
-    }
-
     equal(trm : Term) : boolean {
         return this.value.eq(trm.value);
     }
 
     copy(dst : Term){
+        dst.cloneFrom = this;
         dst.value  = this.value.clone();
         dst.value.parent = dst;
 
@@ -371,10 +383,6 @@ export abstract class Term {
         this.verifyParent(this.parent);
     }
 
-    setStrVal(){
-        this.strval = this.str();
-    }
-
     replaceTerm(target : Term){
         const app : App = this.parent!;
         assert(app != null, "replace");
@@ -400,6 +408,13 @@ export abstract class Term {
         assert(idx != -1, "arg idx");
 
         return idx;
+    }
+
+    argShift(diff : number){
+        const idx = this.argIdx();
+        const parent = this.parent as App;
+        parent.args.splice(idx, 1);
+        parent.args.splice(idx + diff, 0, this);
     }
 
     remArg() {
@@ -485,8 +500,7 @@ export abstract class Term {
     }
 
     str() : string {
-        this.strval = this.strX();
-        return this.strval;
+        return this.strX();
     }
 
     strX() : string {
@@ -501,15 +515,6 @@ export abstract class Term {
     }
     
     tex() : string {
-        if(this.partialTex != undefined){
-            if(this.colored()){
-                return `{\\color{${this.colorName}} ${this.partialTex}}`;
-            }
-            else{
-                return this.partialTex;
-            }
-        }
-
         let text = this.tex2();
 
         if(this.colored()){
@@ -717,7 +722,6 @@ export class Path extends Term {
     clone() : Term {
         const path = new Path(this.indexes);
         this.copy(path);
-        path.setStrVal();
 
         return path;
     }
@@ -797,7 +801,6 @@ export class RefVar extends Term{
     clone() : RefVar {
         const ref = new RefVar(this.name);
         this.copy(ref);
-        ref.setStrVal();
 
         return ref;
     }
@@ -837,7 +840,6 @@ export class ConstNum extends Term{
     clone() : ConstNum {
         const cns = new ConstNum(this.value.numerator, this.value.denominator);
         this.copy(cns);
-        cns.setStrVal();
 
         return cns;
     }
@@ -945,7 +947,7 @@ export class App extends Term{
     strid() : string{
         let s : string;
         if(this.fnc.isOprFnc()){
-            s = this.args.map(x => x.strid()).join(this.fncName);
+            s = "(" + this.args.map(x => x.strid()).join(this.fncName) + ")";
         }
         else{
             s = `${this.fncName}(${this.args.map(x => x.strid()).join(", ")})`;
@@ -965,7 +967,6 @@ export class App extends Term{
         const app = new App(this.fnc.clone(), this.args.map(x => x.clone()));
 
         this.copy(app);
-        app.setStrVal();
 
         return app;
     }
@@ -991,12 +992,6 @@ export class App extends Term{
         this.fnc.verifyParent(this);
 
         this.args.forEach(x => x.verifyParent(this));
-    }
-
-    setStrVal(){
-        this.strval = this.str();
-        this.fnc.setStrVal();
-        this.args.forEach(x => x.setStrVal());
     }
 
     str2() : string {
@@ -1054,7 +1049,45 @@ export class App extends Term{
             text = `(${this.fnc.tex()})(${args_s})`;
         }
         else if(this.fncName == "lim"){
-            text = `\\lim_{${args[1]} \\to ${args[2]}} ${args[0]}`;
+            switch(args.length){
+            case 1:
+                text = `\\lim ${args[0]}`;
+                break;
+            case 3:
+                text = `\\lim_{${args[1]} \\to ${args[2]}} ${args[0]}`;
+                break;
+            default:
+                throw new MyError();
+            }
+        }
+        else if(this.fncName == "sum"){
+            switch(args.length){
+            case 1:
+                text = `\\sum ${args[0]}`;
+                break;
+            case 3:
+                text = `\\sum_{${args[1]}}^{${args[2]}} ${args[0]}`;
+                break;
+            case 4:
+                text = `\\sum_{${args[1]}=${args[2]}}^{${args[3]}} ${args[0]}`;
+                break;
+            default:
+                throw new MyError();
+            }
+        }
+        else if(this.fncName == "log"){
+            if(args.length == 1){
+                text = `\\log ${args[0]}`;
+            }
+            else if(args.length == 2){
+                text = `\\log_{${args[1]}} ${args[0]}`;
+            }
+            else{
+                throw new MyError();
+            }
+        }
+        else if(this.fncName == "{|}"){
+            text = `\\{${args[0]} \\mid ${args[1]} \\}`;
         }
         else if(this.fncName == "in"){
             let ids : string;
@@ -1067,12 +1100,18 @@ export class App extends Term{
             }
             text = `${ids} \\in ${args[1]}`;
         }
+        else if(this.fncName == "complement"){
+            text = `{ ${args[0]} }^c`;
+        }
         else if(this.isDiff()){
             const n = (this.args.length == 3 ? `^{${args[2]}}`:``);
 
             const d = (this.fncName == "diff" ? "d" : "\\partial");
 
-            if(args[0].indexOf("\\frac") == -1){
+            if(this.args.length == 1){
+                text = `(${args[0]})'`;
+            }
+            else if(args[0].indexOf("\\frac") == -1){
 
                 text = `\\frac{ ${d} ${n} ${args[0]}}{ ${d}  ${args[1]}${n}}`;
             }
@@ -1082,13 +1121,28 @@ export class App extends Term{
             }
         }
         else if(isLetterOrAt(this.fncName)){
-            if(["sin", "cos"].includes(this.fncName) && ! (this.args[0] instanceof App)){
+            if(["sin", "cos", "tan"].includes(this.fncName) && ! (this.args[0] instanceof App)){
 
                 text = `${texName(this.fncName)} ${args[0]}`;
+            }
+            else if(this.fncName == "abs"){
+                assert(args.length == 1, "tex2");
+                text = `\\lvert ${args[0]} \\rvert`;
             }
             else if(this.fncName == "sqrt"){
                 assert(args.length == 1, "tex2");
                 text = `\\sqrt{${args[0]}}`;
+            }
+            else if(this.fncName == "nth_root"){
+                assert(args.length == 2, "tex2");
+                text = `\\sqrt[${args[1]}]{${args[0]}}`;
+            }
+            else if(isArithmeticToken(this.fncName) ){
+                text = `${args[0]} ${texName(this.fncName)} ${args[1]}`;
+            }
+
+            else if(isRelationToken(this.fncName) || isArithmeticToken(this.fncName) ){
+                text = `${args[0]} ${texName(this.fncName)} ${args[1]}`;
             }
             else{
 
@@ -1232,6 +1286,14 @@ export class App extends Term{
         this.getAllTerms(terms);
 
         return terms;
+    }
+
+    clearHighlight(){
+        const all_terms = this.allTerms();
+        for(const term of all_terms){
+            term.canceled = false;
+            term.colorName = undefined;
+        }
     }
 
     findTermById(id : number) : Term | undefined {
@@ -1388,6 +1450,20 @@ export class Parser {
 
             return trm;
         }
+        else if(this.token.text == '{'){
+
+            this.next();
+            const element = this.RelationalExpression();
+
+            this.nextToken('|');
+
+            const logic = this.LogicalExpression();
+
+            this.nextToken('}');
+
+            trm = new App(operator("{|}"), [element, logic]);
+            return trm;
+        }
         else{
             throw new SyntaxError();
         }
@@ -1457,7 +1533,11 @@ export class Parser {
     
     MultiplicativeExpression() : Term {
         let trm1 = this.DivExpression();
-        while(this.token.text == "*"){
+        if(this.current() != "*"){
+            return trm1;
+        }
+
+        while(this.current() == "*"){
             let app = new App(operator(this.token.text), [trm1]);
             this.next();
 
@@ -1527,7 +1607,21 @@ export class Parser {
     }
 
     ArithmeticExpression() : Term {
-        return this.AdditiveExpression();
+        const trm1 = this.AdditiveExpression();
+
+        if(! isArithmeticToken(this.current())){
+            return trm1;
+        }
+
+        const app = new App(operator(this.current()), [trm1]);
+        while( isArithmeticToken(this.current()) ){
+            this.next();
+
+            const trm2 = this.AdditiveExpression();
+            app.addArg(trm2);
+        }
+
+        return app;
     }
 
     VariableDeclaration() : App {
@@ -1576,7 +1670,7 @@ export class Parser {
             trm1 = this.ArithmeticExpression();
         }
 
-        while([ "==", "=", "!=", "<", "<=", "in" ].includes(this.token.text)){
+        while(isRelationToken(this.token.text)){
             let app = new App(operator(this.token.text), [trm1]);
             this.next();
 
@@ -1617,22 +1711,63 @@ export class Parser {
         return app;
     }
 
-    LogicalExpression(){
+    OrExpression() : Term {
         const trm1 = this.AndExpression();
 
-        if(this.token.text != "=>"){
-            
+        if(this.current() != "||"){
+
             return trm1;
         }
 
-        this.next();
+        const app = new App(operator("||"), [trm1]);
 
-        let trm2 = this.AndExpression();
-        return new App(operator("=>"), [trm1, trm2]);
+        while( this.current() == "||" ){
+            this.next();
+
+            const trm2 = this.AndExpression();
+            app.addArg(trm2);
+        }
+
+        return app;
+    }
+
+    LogicalExpression(){
+        const trm1 = this.OrExpression();
+
+        if([ "=>", "⇔" ].includes(this.token.text)){
+            const opr = this.token.text;
+
+            this.next();
+
+            let trm2 = this.OrExpression();
+            return new App(operator(opr), [trm1, trm2]);    
+        }
+        else{
+            
+            return trm1;
+        }
     }
 
     RootExpression(){
-        if([ "==", "=", "!=", "<", "<=", "in" ].includes(this.token.text)){
+        if(this.token.text == "let"){
+            this.next();
+
+            const app = this.VariableDeclaration();
+            if(this.token.text as any != ","){
+                return app;
+            }
+
+            const and = new App(operator("&&"), [app]);
+            while(this.token.text as any == ","){
+                this.next();
+
+                const app2 = this.VariableDeclaration();
+                and.addArg(app2);
+            }
+
+            return and;
+        }
+        else if(isRelationToken(this.token.text)){
             let app = new App(operator(this.token.text), []);
             this.next();
 
@@ -1664,14 +1799,10 @@ export function getAllTerms(t : Term, terms: Term[]){
     }
 }
 
-export function makeTermMap(root : Term) : Map<string, Term>{
-    const terms : Term[] = [];
-    getAllTerms(root, terms);
+export function makeIdToTermMap(root : Term) : Map<number, Term>{
+    const terms = allTerms(root);
 
-    const map = new Map<string, Term>();
-    terms.forEach(x => map.set(x.str(), x));
-
-    return map;
+    return new Map<number,Term>(terms.map(x => [x.id, x]));
 }
 
 export function getSubTerms(root : Term, target : Term) : Term[]{

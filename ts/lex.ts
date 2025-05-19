@@ -77,6 +77,7 @@ var SymbolTable : Array<string> = new  Array<string> (
     "&&",
     "||",
     "=>",
+    "⇔",
 
     "+=",
     "-=",
@@ -92,18 +93,10 @@ var SymbolTable : Array<string> = new  Array<string> (
     "|",
     "?",
 );
-
-const reserved : string[] = [
-    "hbar",
-    "nabla",
-    "sin",
-    "cos",
-    "",
-    "",
-    "",
-];
     
-var KeywordMap : Array<string> = new  Array<string> (
+var KeywordMap : Set<string> = new  Set<string> ([
+    "let"
+]
 );
 
 var IdList : Array<string> = new  Array<string> (
@@ -200,7 +193,7 @@ export function lexicalAnalysis(text : string) : Token[] {
             // 識別子の文字列
             var name : string = text.substring(start_pos, pos);
 
-            if (KeywordMap.indexOf(name) != -1) {
+            if (KeywordMap.has(name)) {
                 // 名前がキーワード辞書にある場合
 
                 token_type = TokenType.reservedWord;

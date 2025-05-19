@@ -97,7 +97,7 @@ function pronunciationF(tex_node : TexNode, word : string) : Phrase | undefined 
 
     if(! oprs.has(word)){
         oprs.add(word);
-        msg(`operators : [${word}]`);
+        // msg(`operators : [${word}]`);
     }
 
     return undefined;
@@ -297,6 +297,7 @@ class TexRef extends TexLeaf {
 
             return this.ref.name;
         }
+        // return this.ref.tex();
     }
 
     async *genTex(speech : AbstractSpeech | null, highlightables? : Map<string, Highlightable>) : AsyncGenerator<string, void, unknown> {
@@ -380,9 +381,9 @@ function seq(...params:any[]) : TexSeq {
 }
 
 function join(trms:Term[], delimiter : string) : TexNode {
-    const nodes = trms.map(x => makeFlow(x));
+    const nodes = trms.map(x => makeTermFlow(x));
     if(trms.length == 1){
-        return makeFlow(trms[0]);
+        return makeTermFlow(trms[0]);
     }
     else{
         const nodes : TexNode[] = [];
@@ -391,7 +392,7 @@ function join(trms:Term[], delimiter : string) : TexNode {
                 nodes.push(new TexStr(delimiter));
             }
 
-            nodes.push(makeFlow(trm));
+            nodes.push(makeTermFlow(trm));
         }
 
         return new TexSeq(nodes);
@@ -400,6 +401,9 @@ function join(trms:Term[], delimiter : string) : TexNode {
 
 function prependValue(trm : Term, node : TexNode) : TexNode {
     const fval = trm.value.fval();
+    if(fval != 1 && trm.isAdd()){
+        node = seq("(", node, ")");
+    }
     if(fval == -1){            
         node = seq("-", node);
     }
@@ -423,7 +427,16 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
     else if(typeof trm === "string"){
         return new TexStr(trm);
     }
-    else if(trm instanceof RefVar){
+    else if(trm instanceof Term){
+        return makeTermFlow(trm);
+    }
+    else{
+        throw new MyError();
+    }
+}
+
+function makeTermFlow(trm : Term) : TexNode {
+    if(trm instanceof RefVar){
         const ref = trm;
         const node = new TexRef(ref)
         return prependValue(ref, node);
@@ -449,8 +462,14 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
             }
         }
         else if(app.fncName == "lim"){
+            const arg0 = app.args[0];
+            if(arg0.isAdd() || arg0.isMul()){
+                node = seq( "\\lim_{", app.args[1], "\\to", app.args[2], "}", "(", app.args[0], ")" );
 
-            node = seq( "\\lim_{", app.args[1], "\\to", app.args[2], "}", app.args[0] );
+            }
+            else{
+                node = seq( "\\lim_{", app.args[1], "\\to", app.args[2], "}", app.args[0] );
+            }
         }
         else if(app.fncName == "in"){
             const ids = join(app.args, " , ");
@@ -471,7 +490,7 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
             }
         }
         else if(isLetterOrAt(app.fncName)){
-            if(["sin", "cos"].includes(app.fncName) && ! (app.args[0] instanceof App)){
+            if(["sin", "cos", "tan"].includes(app.fncName) && ! (app.args[0] instanceof App)){
 
                 node = seq( app.fnc, app.args[0] )
             }
@@ -479,6 +498,11 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
 
                 assert(app.args.length == 1);
                 node = seq("\\sqrt{", app.args[0], "}");
+            }
+            else if(app.fncName == "nth_root"){
+
+                assert(app.args.length == 2);
+                node = seq("\\sqrt[", app.args[1], "]{", app.args[0], "}");
             }
             else{
 
@@ -490,11 +514,11 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
             switch(app.fncName){
             case "+":
                 switch(app.args.length){
-                case 0: 
+                case 0:
                     throw new MyError();
 
                 case 1:
-                    node = makeFlow(app.args[0]);
+                    node = makeTermFlow(app.args[0]);
                     break;
 
                 default:
@@ -512,7 +536,15 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
                             }
                         }
             
-                        nodes.push(makeFlow(arg));
+                        const arg_node = makeTermFlow(arg);
+                        if(app.isAdd() && arg.isMul()){
+
+                            nodes.push(seq("(", arg_node, ")"));
+                        }
+                        else{
+
+                            nodes.push(arg_node);
+                        }
                     }
             
                     node = new TexSeq(nodes);
@@ -520,13 +552,27 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
                 }
                 break;
 
+            case "*":
+                switch(app.args.length){
+                case 0:
+                    throw new MyError();
+
+                case 1:
+                    node = makeTermFlow(app.args[0]);
+                    break;
+
+                default:
+                    node = join(app.args, app.fncName);
+                }
+                break;
+    
             case "/":
                 if(app.args.length == 3){
-                    msg(`/ 3args [${app.args[0].strval}] [ ${app.args[1].strval}] [ ${app.args[2].strval}]`);
+                    // msg(`/ 3args [${app.args[0].str()}] [ ${app.args[1].str()}] [ ${app.args[2].str()}]`);
                 }
                 else if(app.args.length == 1){
-                    msg(`/ 1arg [${app.args[0].strval}]`);
-                    return makeFlow(app.args[0]);
+                    // msg(`/ 1arg [${app.args[0].str()}]`);
+                    return makeTermFlow(app.args[0]);
                 }
                 else{
                     assert(app.args.length == 2);
@@ -535,7 +581,7 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
                 break;
 
             case "^":
-                let exponent = makeFlow(app.args[1]);
+                let exponent = makeTermFlow(app.args[1]);
                 if(app.args[1].isValue(2)){
                     exponent.say("squared");
                 }
@@ -570,31 +616,24 @@ export function makeFlow(trm : TexNode | Term | string) : TexNode {
             }
         }
 
-        if(app.parent != null){
+        // if(app.parent != null){
 
-            if((app.isAdd() || app.isMul()) && app.parent.fncName == "lim"){
-
-                node = seq("(", node, ")");
-            }
-            else if(app.isOperator() && app.parent.isOperator() && !app.parent.isDiv()){
-                if(app.parent.fncName == "^" && app.parent.args[1] == app){
-                    ;
-                }
-                else if(app.parent.precedence() <= app.precedence()){
-                    node = seq("(", node, ")");
-                }            
-            }
-        }
+        //     if(app.isOperator() && app.parent.isOperator() && !app.parent.isDiv()){
+        //         if(app.parent.fncName == "^" && app.parent.args[1] == app){
+        //             ;
+        //         }
+        //         else if(app.parent.precedence() <= app.precedence()){
+        //             node = seq("(", node, ")");
+        //         }            
+        //     }
+        // }
 
         return prependValue(app, node);
     }
     else{
-
         throw new MyError();
     }
 }
-
-
 
 function getAllTexNodes(node : TexNode, nodes: TexNode[]){
     nodes.push(node);
@@ -615,7 +654,7 @@ export function makeNodeTextByApp(root : Term) : [TexNode, string]{
     root.setParent(null);
     root.setTabIdx();
 
-    const node = makeFlow(root);
+    const node = makeTermFlow(root);
     const phrases : Phrase[] = [];
     node.makeSpeech(phrases);
 
@@ -624,7 +663,7 @@ export function makeNodeTextByApp(root : Term) : [TexNode, string]{
     return [node, text];
 }
 
-export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLDivElement, highlightables? : Map<string, Highlightable>){
+export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLDivElement | HTMLSpanElement, highlightables? : Map<string, Highlightable>){
     div.innerHTML = "";
 
     const [node, text] = makeNodeTextByApp(root);
@@ -641,6 +680,8 @@ export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLD
             await sleep(10);
         }
     }
+    
+    renderKatexSub(div, root.tex());
 
     await speech.waitEnd();
 }
