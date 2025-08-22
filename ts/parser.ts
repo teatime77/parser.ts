@@ -1509,7 +1509,7 @@ export class Parser {
     
     DivExpression() : Term {
         let trm1 = this.UnaryExpression();
-        while(this.token.text == "/"){
+        while(this.token.text == "/" || this.token.text == "%"){
             let app = new App(operator(this.token.text), [trm1]);
             this.next();
 
