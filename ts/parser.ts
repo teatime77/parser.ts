@@ -4,6 +4,7 @@ export let termDic : { [id : number] : Term } = {};
 
 export const pathSep = ":";
 export let variables : Variable[] = [];
+let isArithmetic : boolean = false;
 
 export function isShapeName(name : string) : boolean {
     const names = [
@@ -45,7 +46,9 @@ export function actionRef(name : string) : RefVar {
     return new RefVar(name);
 }
 
-export function parseMath(text: string) : Term {
+export function parseMath(text: string, is_arithmetic : boolean = false) : Term {
+    isArithmetic = is_arithmetic;
+
     // msg(`parse-Math:[${text}]`);
     const parser = new Parser(text);
     const trm = parser.RootExpression();
@@ -55,6 +58,7 @@ export function parseMath(text: string) : Term {
 
     trm.setParent(null);
 
+    isArithmetic = false;
     return trm;
 }
 
@@ -566,6 +570,10 @@ export abstract class Term {
         return this instanceof App && this.fncName == "+";
     }
 
+    isSub() : boolean {
+        return this instanceof App && this.fncName == "-";
+    }
+
     isMul() : boolean {
         return this instanceof App && this.fncName == "*";
     }
@@ -855,6 +863,14 @@ export class ConstNum extends Term{
     tex2() : string {
         return this.value.tex();
     }
+
+    isInt() : boolean {
+        return this.value.isInt();
+    }
+
+    int() : number {
+        return this.value.int();
+    }
 }
 
 
@@ -1014,20 +1030,16 @@ export class App extends Term{
                     case 0: return " +[] ";
                     case 1: return ` +[${args[0]}] `;
                     }
-                    text = args.join(` `);
                     break
     
                 case "/":
                     if(this.args.length != 2){
                         throw new MyError();
                     }
-                    text = `${args[0]} / ${args[1]}`;
-                    break
-        
-                default:
-                    text = args.join(` ${this.fncName} `);
                     break
             }
+
+            text = args.join(` ${this.fncName} `);
         }
 
         if(this.isOperator() && this.parent != null && this.parent.isOperator()){
@@ -1555,7 +1567,7 @@ export class Parser {
             }
         }
 
-        if(trm1 instanceof App && trm1.args[0] instanceof ConstNum){
+        if((! isArithmetic) && trm1 instanceof App && trm1.args[0] instanceof ConstNum){
             if(trm1.args.length == 2){
 
                 const [num, trm2] = trm1.args;
