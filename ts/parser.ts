@@ -1,4 +1,5 @@
-namespace parser_ts {
+import { TokenType, isLetter, isLetterOrAt, Token, lexicalAnalysis, TokenSubType } from "./lex.js";
+import { assert, MyError, msg, range, $ } from "./parser_util.js";
 
 export let termDic : { [id : number] : Term } = {};
 
@@ -630,6 +631,10 @@ export abstract class Term {
     divisor() : Term {
         assert(this.isDiv());
         return (this as any as App).args[1];
+    }
+
+    int() : number {
+        throw new MyError();
     }
 
 
@@ -1838,6 +1843,4 @@ export function bodyOnLoad(){
         msg(text);
         parseMath(text);
     }
-}
-
 }

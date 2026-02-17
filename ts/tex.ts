@@ -1,6 +1,9 @@
-namespace parser_ts {
-//
-type AbstractSpeech = i18n_ts.AbstractSpeech;
+import { AbstractSpeech, sleep } from '@i18n';
+
+import { isLetterOrAt } from "./lex.js";
+import { isGreek, App, Term, ConstNum, RefVar, texName } from "./parser.js";
+import { msg, MyError, assert, renderKatexSub } from "./parser_util.js";
+
 
 export interface Highlightable {
     highlight(highlighted : boolean) : void;
@@ -684,6 +687,4 @@ export async function showFlow(speech : AbstractSpeech, root : Term, div : HTMLD
     renderKatexSub(div, root.tex());
 
     await speech.waitEnd();
-}
-
 }

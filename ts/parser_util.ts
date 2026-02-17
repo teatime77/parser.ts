@@ -1,8 +1,6 @@
-var katex : any;
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
-namespace parser_ts {
-//
-export const sleep = i18n_ts.sleep;
 const $dic = new Map<string, HTMLElement>();
 
 
@@ -62,7 +60,4 @@ export function renderKatexSub(ele: HTMLElement, tex_text: string){
         // newLineInDisplayMode : "ignore",
         macros : getUserMacros()
     });
-}
-
-
 }

@@ -1,4 +1,5 @@
-namespace parser_ts {
+import { pathSep } from "./parser.js";
+import { assert } from "./parser_util.js";
 
 export enum TokenType{
     unknown,
@@ -280,7 +281,4 @@ export function lexicalAnalysis(text : string) : Token[] {
     }
 
     return tokens;
-}
-
-
 }
