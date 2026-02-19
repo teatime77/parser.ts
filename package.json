@@ -1,6 +1,6 @@
 {
   "name": "@stem/parser",
   "scripts": {
-    "build": "tsc -b && node ../scripts/smart-build.js"
+    "build": "tsc -b"
   }
 }
