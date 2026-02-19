@@ -1,5 +1,4 @@
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+declare const katex: any;
 
 const $dic = new Map<string, HTMLElement>();
 
@@ -50,6 +49,7 @@ export function getUserMacros(){
 }
 
 export function renderKatexSub(ele: HTMLElement, tex_text: string){
+    assert(katex != undefined);
     ele.innerHTML = "";
         
     katex.render(tex_text, ele, {

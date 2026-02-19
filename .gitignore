@@ -9,3 +9,4 @@ public/lib/i18n
 public/lib/tsconfig.tsbuildinfo
 dist
 tsconfig.tsbuildinfo
+lib
