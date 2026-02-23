@@ -54,7 +54,7 @@ export function parseMath(text: string, is_arithmetic : boolean = false) : Term 
     const parser = new Parser(text);
     const trm = parser.RootExpression();
     if(parser.token.typeTkn != TokenType.eot){
-        throw new SyntaxError();
+        throw new MyError();
     }
 
     trm.setParent(null);
@@ -1355,7 +1355,7 @@ export class Parser {
     nextToken(text : string){
         if(this.token.text != text){
             this.showError(text);
-            throw new SyntaxError();
+            throw new MyError();
         }
 
         this.next();
@@ -1423,7 +1423,7 @@ export class Parser {
         else if(this.token.typeTkn == TokenType.Number){
             let n = parseFloat(this.token.text);
             if(isNaN(n)){
-                throw new SyntaxError();
+                throw new MyError();
             }
 
             trm = new ConstNum(n);
@@ -1453,7 +1453,7 @@ export class Parser {
             trm = this.RelationalExpression();
 
             if(this.current() != ')'){
-                throw new SyntaxError();
+                throw new MyError();
             }
             this.next();
 
@@ -1482,7 +1482,7 @@ export class Parser {
             return trm;
         }
         else{
-            throw new SyntaxError();
+            throw new MyError();
         }
 
         return trm;
