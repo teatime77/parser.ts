@@ -111,6 +111,10 @@ export function isLetterOLD(s : string) : boolean {
     return s.length === 1 && ("a" <= s && s <= "z" || "A" <= s && s <= "Z" || s == "_");
 }
 
+export function isUnicodeLetter(s : string) : boolean {
+    return /^\p{L}$/u.test(s);
+}
+
 export function isLetter(s : string) : boolean {
     const symbols = ["∞", "∠"];
     return s.length === 1 && (/^\p{L}$/u.test(s) || s == "_" || symbols.includes(s) );
