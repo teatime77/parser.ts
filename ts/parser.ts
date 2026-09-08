@@ -1299,6 +1299,11 @@ export class App extends Term{
         return -1;
     }
 
+    getArg(idx : number){
+        assert(0 <= idx && idx < this.args.length);
+        return this.args[idx];
+    }
+
     setArg(trm : Term, idx : number){
         this.args[idx] = trm;
         trm.parent = this;
